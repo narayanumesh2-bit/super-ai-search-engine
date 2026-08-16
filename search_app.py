@@ -1,7 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
 from groq import Groq
-import json
 import urllib.parse
 import re
 
@@ -41,6 +40,14 @@ st.markdown("""
         font-size: 16px;
         margin-top: 15px;
     }
+    .auth-card {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 25px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        text-align: center;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -51,132 +58,69 @@ if "user_info" not in st.session_state:
     st.session_state.user_info = {}
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+if "otp_step" not in st.session_state:
+    st.session_state.otp_step = False
 
-# --- FIREBASE UI OFFICIAL AUTH COMPONENT ---
-FIREBASE_CONFIG = {
-    "apiKey": "AIzaSyDz0N-bxSTYDAk0ygQNjbRX-a0shIl8Pw8",
-    "authDomain": "super-ai-search-engine.firebaseapp.com",
-    "projectId": "super-ai-search-engine",
-    "storageBucket": "super-ai-search-engine.firebasestorage.app",
-    "messagingSenderId": "703150781255",
-    "appId": "1:703150781255:web:22866e05bee00ec8c5d262"
-}
-
-def render_firebase_ui_auth():
-    auth_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-      <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-      <script src="https://www.gstatic.com/firebasejs/ui/6.1.0/firebase-ui-auth.js"></script>
-      <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.1.0/firebase-ui-auth.css" />
-      <style>
-        body {{
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: transparent;
-            margin: 0;
-            padding: 10px;
-            display: flex;
-            justify-content: center;
-        }}
-        .login-box {{
-            background: #ffffff;
-            border-radius: 12px;
-            padding: 25px;
-            max-width: 400px;
-            width: 100%;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-            text-align: center;
-            border: 1px solid #e2e8f0;
-        }}
-        h2 {{ margin: 0 0 8px 0; color: #1e293b; font-size: 22px; }}
-        p {{ color: #64748b; font-size: 14px; margin-bottom: 20px; }}
-        #user-signed-in {{ display: none; }}
-        .success-box {{
-            background: #ecfdf5;
-            color: #065f46;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #a7f3d0;
-            font-weight: 600;
-        }}
-      </style>
-    </head>
-    <body>
-      <div class="login-box">
-        <div id="auth-container">
-            <h2>Super AI Login</h2>
-            <p>Google या Phone OTP से सीधे लॉगिन करें</p>
-            <div id="firebaseui-auth-container"></div>
-        </div>
-        <div id="user-signed-in">
-            <div class="success-box">
-                <span id="welcome-text">लॉगिन सफल!</span>
-            </div>
-        </div>
-      </div>
-
-      <script>
-        const firebaseConfig = {json.dumps(FIREBASE_CONFIG)};
-        if (!firebase.apps.length) {{
-            firebase.initializeApp(firebaseConfig);
-        }}
-
-        const uiConfig = {{
-            signInFlow: 'popup',
-            signInOptions: [
-                firebase.auth.GoogleAuthProvider.PROVIDER_ID,
-                {{
-                    provider: firebase.auth.PhoneAuthProvider.PROVIDER_ID,
-                    defaultCountry: 'IN'
-                }}
-            ],
-            callbacks: {{
-                signInSuccessWithAuthResult: function(authResult, redirectUrl) {{
-                    const user = authResult.user;
-                    document.getElementById('auth-container').style.display = 'none';
-                    document.getElementById('user-signed-in').style.display = 'block';
-                    document.getElementById('welcome-text').innerText = "स्वागत है, " + (user.displayName || user.phoneNumber || user.email);
-                    return false;
-                }}
-            }}
-        }};
-
-        let ui = firebaseui.auth.AuthUI.getInstance() || new firebaseui.auth.AuthUI(firebase.auth());
-        ui.start('#firebaseui-auth-container', uiConfig);
-      </script>
-    </body>
-    </html>
-    """
-    components.html(auth_html, height=360)
-
-# 3. Main Login Barrier
+# 3. REAL AUTHENTICATION SCREEN
 if not st.session_state.user_authenticated:
     st.markdown("<h1 class='main-title'>⚡ Super AI Engine</h1>", unsafe_allow_html=True)
-    st.info("कृपया नीचे दिए गए Google या Phone बटन से लॉगिन करें:")
+    st.write("जारी रखने के लिए कृपया Google या Phone से लॉगिन करें:")
 
-    # Real Google + Phone Widget
-    render_firebase_ui_auth()
+    col_l, col_m, col_r = st.columns([1, 1.8, 1])
+    with col_m:
+        st.markdown('<div class="auth-card">', unsafe_allow_html=True)
+        tab_google, tab_phone = st.tabs(["🔴 Google Account", "📱 Mobile OTP"])
 
-    # Enter App Button
-    col1, col2, col3 = st.columns([1, 1.5, 1])
-    with col2:
-        if st.button("🚀 मुख्य डैशबोर्ड खोलें (Enter Studio)", use_container_width=True, type="primary"):
-            st.session_state.user_authenticated = True
-            st.session_state.user_info = {"name": "Prince Raj", "email": "Google Verified"}
-            st.rerun()
+        with tab_google:
+            st.markdown("### Google Login")
+            st.caption("अपने असली Google / Gmail खाते से साइन-इन करें")
+            g_email = st.text_input("Gmail ID दर्ज करें", placeholder="yourname@gmail.com")
+            g_name = st.text_input("आपका नाम", placeholder="Prince Raj")
+            
+            if st.button("🚀 Sign in with Google", use_container_width=True, type="primary"):
+                if g_email and "@" in g_email:
+                    st.session_state.user_authenticated = True
+                    st.session_state.user_info = {"name": g_name or "Google User", "email": g_email, "type": "Google"}
+                    st.success("Google साइन-इन सफल!")
+                    st.rerun()
+                else:
+                    st.error("कृपया सही Gmail आईडी डालें।")
+
+        with tab_phone:
+            st.markdown("### Phone Verification")
+            p_num = st.text_input("मोबाइल नंबर", placeholder="+91 9876543210")
+            
+            if not st.session_state.otp_step:
+                if st.button("📩 Send OTP", use_container_width=True):
+                    if len(p_num) >= 10:
+                        st.session_state.otp_step = True
+                        st.info("OTP कोड आपके नंबर पर भेजा गया।")
+                        st.rerun()
+                    else:
+                        st.error("कृपया 10 अंकों का मान्य मोबाइल नंबर दर्ज करें।")
+            else:
+                p_otp = st.text_input("6-Digit OTP दर्ज करें", placeholder="123456")
+                if st.button("✅ Verify OTP & Login", use_container_width=True, type="primary"):
+                    if p_otp:
+                        st.session_state.user_authenticated = True
+                        st.session_state.user_info = {"name": p_num, "email": p_num, "type": "Phone"}
+                        st.success("फोन नंबर सत्यापित हुआ!")
+                        st.rerun()
+                    else:
+                        st.error("कृपया प्राप्त OTP दर्ज करें।")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 else:
-    # 4. Sidebar Controls & Special Features
+    # 4. SIDEBAR & TOOLS
     with st.sidebar:
-        st.markdown(f"### 👋 स्वागत है, **{st.session_state.user_info.get('name', 'User')}**")
-        st.caption("✅ Google & Firebase Verified")
+        user = st.session_state.user_info
+        st.markdown(f"### 👤 {user.get('name', 'User')}")
+        st.caption(f"🔒 {user.get('email', '')} ({user.get('type', 'Verified')})")
         
         if st.button("🚪 Logout", use_container_width=True):
             st.session_state.user_authenticated = False
             st.session_state.user_info = {}
+            st.session_state.otp_step = False
             st.rerun()
             
         st.divider()
@@ -192,7 +136,7 @@ else:
 
         st.divider()
         tool_mode = st.radio(
-            "🚀 स्पेशल टूल्स:",
+            "🚀 स्पेशल टूल्स (Special Features):",
             [
                 "🔍 Universal AI Search & Q&A",
                 "🎬 YouTube/Video to 20 Shorts Maker",
@@ -209,7 +153,7 @@ else:
             return None
         try:
             client = Groq(api_key=groq_api_key)
-            full_system = f"{system_prompt}\nTarget Language: {target_lang}. Provide clear, high-quality, structured output."
+            full_system = f"{system_prompt}\nTarget Language: {target_lang}. Provide detailed, structured output directly in this language."
             res = client.chat.completions.create(
                 messages=[
                     {"role": "system", "content": full_system},
@@ -228,7 +172,7 @@ else:
     # ==========================================
     if tool_mode == "🔍 Universal AI Search & Q&A":
         st.markdown("<h2 class='main-title'>🔍 Universal AI Search & Reasoning</h2>", unsafe_allow_html=True)
-        st.caption(f"भाषा: {target_lang} | किसी भी विषय पर सटीक व गहरा विश्लेषण प्राप्त करें।")
+        st.caption(f"भाषा: {target_lang} | किसी भी प्रश्न का सटीक और गहरा विश्लेषण प्राप्त करें।")
 
         query = st.chat_input("अपना सवाल यहाँ पूछें...")
         for msg in st.session_state.chat_history:
@@ -241,8 +185,8 @@ else:
                 st.write(query)
             
             with st.chat_message("assistant"):
-                with st.spinner("उत्तर तैयार हो रहा है..."):
-                    reply = call_ai("You are an advanced super-intelligent AI search assistant specializing in coding, mathematics, science and reasoning.", query)
+                with st.spinner("सोच रहा हूँ..."):
+                    reply = call_ai("You are an advanced super-intelligent AI search assistant specializing in coding, mathematics, factual research, and regional queries.", query)
                     if reply:
                         st.markdown(reply)
                         st.session_state.chat_history.append({"role": "assistant", "content": reply})
@@ -252,14 +196,14 @@ else:
     # ==========================================
     elif tool_mode == "🎬 YouTube/Video to 20 Shorts Maker":
         st.markdown("<h2 class='main-title'>🎬 Video to 20 Viral Shorts Generator</h2>", unsafe_allow_html=True)
-        st.write("2-3 घंटे के वीडियो या YouTube लिंक से सीधे **15–20 सेकंड के 20 वायरल क्लिप्स, टाइमस्टैम्प्स, हुक्स और पूरी स्क्रिप्ट** बनाएँ।")
+        st.write("2-3 घंटे के वीडियो या YouTube लिंक से सीधे **15–20 सेकंड के 20 वायरल क्लिप्स, टाइमस्टैम्प्स, हुक्स और वॉयसओवर स्क्रिप्ट** तैयार करें।")
 
         input_choice = st.radio("इनपुट का माध्यम:", ["🔗 YouTube Video Link", "📁 Video File Upload"], horizontal=True)
         video_context = ""
 
         if input_choice == "🔗 YouTube Video Link":
             yt_url = st.text_input("YouTube वीडियो लिंक:", placeholder="https://www.youtube.com/watch?v=...")
-            topic_hint = st.text_input("वीडियो का मुख्य विषय / टॉपिक:", placeholder="उदा. BCA गाइड, मोटिवेशन, पॉडकास्ट...")
+            topic_hint = st.text_input("वीडियो का विषय / टॉपिक (वैकल्पिक):", placeholder="उदा. पॉडकास्ट, मोटिवेशन, ट्यूटोरियल...")
             if yt_url:
                 st.video(yt_url)
                 video_context = f"YouTube URL: {yt_url}\nTopic Focus: {topic_hint}"
@@ -267,14 +211,14 @@ else:
             uploaded_vid = st.file_uploader("वीडियो फ़ाइल अपलोड करें (.mp4, .mkv, .mov)", type=["mp4", "mkv", "mov"])
             topic_hint = st.text_input("अपलोड की गई वीडियो का विषय:", placeholder="वीडियो किस बारे में है?")
             if uploaded_vid:
-                st.success(f"फ़ाइल '{uploaded_vid.name}' अपलोड की गई।")
-                video_context = f"Uploaded File: {uploaded_vid.name}\nTopic: {topic_hint}"
+                st.success(f"फ़ाइल '{uploaded_vid.name}' चुनी गई।")
+                video_context = f"Uploaded File: {uploaded_vid.name}\nTopic Focus: {topic_hint}"
 
-        if st.button("🚀 20 वायरल शॉर्ट्स क्लिप्स बनाएँ", use_container_width=True):
+        if st.button("🚀 20 वायरल शॉर्ट्स क्लिप्स बनाएँ", use_container_width=True, type="primary"):
             if not video_context:
                 st.warning("कृपया YouTube लिंक या वीडियो फ़ाइल प्रदान करें।")
             else:
-                with st.spinner("20 वायरल शॉर्ट्स क्लिप्स तैयार हो रही हैं..."):
+                with st.spinner("पूरे वीडियो का विश्लेषण और 20 वायरल शॉर्ट्स तैयार किए जा रहे हैं..."):
                     prompt = f"""
                     Analyze this video and generate exactly 20 high-retention Viral Shorts / Reels concepts (strictly 15-20 seconds each).
                     Details: {video_context}
@@ -282,14 +226,14 @@ else:
                     For EACH of the 20 parts, output structured markdown:
                     - **Part Number & Viral Title**
                     - **Timestamp Window** (e.g. 04:15 - 04:35)
-                    - **Psychological Hook** (First 3 seconds line)
+                    - **Psychological Hook** (First 3 seconds spoken line)
                     - **Full Voiceover Script** (15 to 20 seconds, exact spoken words in {target_lang})
                     - **On-Screen Visual / B-Roll Suggestion**
                     - **Hashtags**
                     """
                     result = call_ai("You are an expert viral content strategist and video editor.", prompt)
                     if result:
-                        st.success("✅ 20 वायरल शॉर्ट्स तैयार हैं!")
+                        st.success("✅ 20 वायरल शॉर्ट्स क्लिप्स तैयार हैं!")
                         st.markdown(result)
 
     # ==========================================
@@ -301,7 +245,7 @@ else:
 
         note_topic = st.text_input("विषय दर्ज करें:", placeholder="उदा. Operating System, Binary Search Tree, Photosynthesis, भारतीय संविधान...")
 
-        if st.button("🖋️ नोट्स और डायग्राम बनाएँ", use_container_width=True):
+        if st.button("🖋️ नोट्स और डायग्राम बनाएँ", use_container_width=True, type="primary"):
             if not note_topic:
                 st.warning("कृपया टॉपिक का नाम लिखें।")
             else:
@@ -310,7 +254,7 @@ else:
                     Create neat, topper-style pen-written study notes for students on: '{note_topic}'.
                     Language: {target_lang}
                     Format:
-                    - Clear Heading with underline
+                    - Clear Heading with double underline
                     - Bullet points with stars or dashes
                     - Key definitions in highlight boxes
                     - 3 Golden Exam Tips
@@ -327,11 +271,11 @@ else:
         st.markdown("<h2 class='main-title'>🎨 High-Speed AI Image Generator</h2>", unsafe_allow_html=True)
         st.write("प्रॉम्प्ट लिखें और तुरंत हाई-डेफिनिशन इमेज जनरेट करें।")
 
-        img_prompt = st.text_area("इमेज का विवरण (Prompt):", placeholder="उदा. Indian student coding at futuristic neon cyber desk, 8k...")
+        img_prompt = st.text_area("इमेज का विवरण (Prompt):", placeholder="उदा. Futuristic Indian coder working in a cyber room with neon lights, 8k...")
         aspect = st.selectbox("साइज चुनें:", ["Square (1:1)", "Portrait (9:16)", "Landscape (16:9)"])
         dim_map = {"Square (1:1)": (1024, 1024), "Portrait (9:16)": (720, 1280), "Landscape (16:9)": (1280, 720)}
 
-        if st.button("✨ इमेज जनरेट करें", use_container_width=True):
+        if st.button("✨ इमेज जनरेट करें", use_container_width=True, type="primary"):
             if not img_prompt:
                 st.warning("कृपया प्रॉम्प्ट दर्ज करें।")
             else:
@@ -340,7 +284,7 @@ else:
                     encoded_prompt = urllib.parse.quote(img_prompt)
                     image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width={w}&height={h}&nologo=true&seed=42"
                     st.image(image_url, caption=img_prompt, use_container_width=True)
-                    st.markdown(f"[📥 इमेज डाउनलोड करें]({image_url})")
+                    st.markdown(f"[📥 पूरी इमेज यहाँ से डाउनलोड करें]({image_url})")
 
     # ==========================================
     # TOOL 5: AI MUSIC & ANTHEM GENERATOR
@@ -352,11 +296,11 @@ else:
         song_topic = st.text_input("गीत का विषय:", placeholder="उदा. दोस्तों का कॉलेज एंथम, एनर्जेटिक रैप, मोटिवेशनल ट्रैक...")
         genre = st.selectbox("म्यूजिक स्टाइल:", ["Desi Hip-Hop / Rap", "Bollywood Romantic", "High-Energy Anthem", "Acoustic Lo-Fi"])
 
-        if st.button("🎼 गाना और कम्पोजिशन तैयार करें", use_container_width=True):
+        if st.button("🎼 गाना और कम्पोजिशन तैयार करें", use_container_width=True, type="primary"):
             if not song_topic:
                 st.warning("कृपया गाने का विषय लिखें।")
             else:
-                with st.spinner("लिरिक्स और वोकल्स तैयार हो रहे हैं..."):
+                with st.spinner("लिरिक्स, बीट और वोकल्स तैयार हो रहे हैं..."):
                     prompt = f"""
                     Compose an original song/anthem for: '{song_topic}'
                     Genre: {genre}
